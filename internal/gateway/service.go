@@ -3,10 +3,14 @@ package gateway
 import (
 	"context"
 	"fmt"
+	"net"
 
 	"github.com/mr1hm/grpc-demo/internal/config"
 	"github.com/mr1hm/grpc-demo/proto/gatewaypb"
 	"github.com/mr1hm/grpc-demo/proto/userpb"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/reflection"
 )
 
 // Service implements the GatewayService gRPC server
@@ -14,14 +18,59 @@ type Service struct {
 	cfg *config.Config
 	gatewaypb.UnimplementedGatewayServiceServer
 	userClient userpb.UserServiceClient
+	conn       *grpc.ClientConn
 }
 
 // NewService creates a new Gateway service that connects to the User service
-func NewService(cfg *config.Config, userClient userpb.UserServiceClient) (*Service, error) {
+func NewService(cfg *config.Config, userServiceAddr string) *Service {
+	conn, err := grpc.NewClient(userServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		cfg.Fatalf("Failed to connect to user service: %v", err)
+	}
+
+	return &Service{
+		cfg:        cfg,
+		userClient: userpb.NewUserServiceClient(conn),
+		conn:       conn,
+	}
+}
+
+// NewServiceWithClient creates a Gateway service with a provided client (for testing)
+func NewServiceWithClient(cfg *config.Config, userClient userpb.UserServiceClient) *Service {
 	return &Service{
 		cfg:        cfg,
 		userClient: userClient,
-	}, nil
+	}
+}
+
+// Close closes the client connection
+func (s *Service) Close() error {
+	if s.conn != nil {
+		return s.conn.Close()
+	}
+	return nil
+}
+
+// Start creates a listener, registers the service, and starts serving in a goroutine.
+// Returns the server for graceful shutdown.
+func (s *Service) Start() *grpc.Server {
+	lis, err := net.Listen("tcp", s.cfg.GatewayServicePort)
+	if err != nil {
+		s.cfg.Fatalf("Gateway service failed to listen: %v", err)
+	}
+
+	server := grpc.NewServer()
+	gatewaypb.RegisterGatewayServiceServer(server, s)
+	reflection.Register(server)
+
+	go func() {
+		s.cfg.Infof("[Gateway Service] Starting on %s", s.cfg.GatewayServicePort)
+		if err := server.Serve(lis); err != nil {
+			s.cfg.Fatalf("Gateway service error: %v", err)
+		}
+	}()
+
+	return server
 }
 
 // GetUserProfile gets a user profile by calling the internal User service
