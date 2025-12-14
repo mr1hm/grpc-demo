@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package gatewaypb;
+
+option go_package = "github.com/mr1hm/grpc-demo/proto/gatewaypb";
+
+// Gateway Service - public API that orchestrates internal services
+service GatewayService {
+  rpc GetUserProfile(GetUserProfileRequest) returns (GetUserProfileResponse);
+  rpc RegisterUser(RegisterUserRequest) returns (RegisterUserResponse);
+}
+
+message GetUserProfileRequest {
+  string user_id = 1;
+}
+
+message GetUserProfileResponse {
+  string user_id = 1;
+  string name = 2;
+  string email = 3;
+  string status = 4; // Added by gateway
+}
+
+message RegisterUserRequest {
+  string name = 1;
+  string email = 2;
+}
+
+message RegisterUserResponse {
+  string user_id = 1;
+  string message = 2;
+}

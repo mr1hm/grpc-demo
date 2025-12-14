@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package userpb;
+
+option go_package = "github.com/mr1hm/grpc-demo/proto/userpb";
+
+// Internal User Service - manages user data
+service UserService {
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+}
+
+message GetUserRequest {
+  string user_id = 1;
+}
+
+message GetUserResponse {
+  string user_id = 1;
+  string name = 2;
+  string email = 3;
+}
+
+message CreateUserRequest {
+  string name = 1;
+  string email = 2;
+}
+
+message CreateUserResponse {
+  string user_id = 1;
+  string name = 2;
+  string email = 3;
+}
