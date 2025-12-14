@@ -29,8 +29,7 @@ func (m *mockUserClient) CreateUser(ctx context.Context, req *userpb.CreateUserR
 
 func newTestGatewayService(mock *mockUserClient) *Service {
 	cfg := config.New(":50051", ":50052")
-	svc, _ := NewService(cfg, mock)
-	return svc
+	return NewServiceWithClient(cfg, mock)
 }
 
 func TestGetUserProfile(t *testing.T) {
