@@ -12,6 +12,7 @@ import (
 	"github.com/mr1hm/grpc-demo/proto/gatewaypb"
 	"github.com/mr1hm/grpc-demo/proto/userpb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -69,7 +70,14 @@ func startGatewayService(cfg *config.Config) {
 		cfg.Fatalf("Gateway service failed to listen: %v", err)
 	}
 
-	gatewaySvc, err := gateway.NewService(cfg, "localhost"+cfg.UserServicePort)
+	// Create gRPC client connection to User service
+	conn, err := grpc.NewClient("localhost"+cfg.UserServicePort, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		cfg.Fatalf("Failed to connect to user service: %v", err)
+	}
+	userClient := userpb.NewUserServiceClient(conn)
+
+	gatewaySvc, err := gateway.NewService(cfg, userClient)
 	if err != nil {
 		cfg.Fatalf("Failed to create gateway service: %v", err)
 	}

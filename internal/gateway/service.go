@@ -7,8 +7,6 @@ import (
 	"github.com/mr1hm/grpc-demo/internal/config"
 	"github.com/mr1hm/grpc-demo/proto/gatewaypb"
 	"github.com/mr1hm/grpc-demo/proto/userpb"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 // Service implements the GatewayService gRPC server
@@ -19,15 +17,10 @@ type Service struct {
 }
 
 // NewService creates a new Gateway service that connects to the User service
-func NewService(cfg *config.Config, userServiceAddr string) (*Service, error) {
-	conn, err := grpc.NewClient(userServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to user service: %w", err)
-	}
-
+func NewService(cfg *config.Config, userClient userpb.UserServiceClient) (*Service, error) {
 	return &Service{
 		cfg:        cfg,
-		userClient: userpb.NewUserServiceClient(conn),
+		userClient: userClient,
 	}, nil
 }
 
