@@ -3,11 +3,14 @@ package user
 import (
 	"context"
 	"fmt"
+	"net"
 	"sync"
 
 	"github.com/mr1hm/grpc-demo/internal/config"
 	"github.com/mr1hm/grpc-demo/proto/userpb"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 )
 
@@ -27,6 +30,28 @@ func NewService(cfg *config.Config) *Service {
 		users:  make(map[string]*userpb.GetUserResponse),
 		nextID: 1,
 	}
+}
+
+// Start creates a listener, registers the service, and starts serving in a goroutine.
+// Returns the server for graceful shutdown.
+func (s *Service) Start() *grpc.Server {
+	lis, err := net.Listen("tcp", s.cfg.UserServicePort)
+	if err != nil {
+		s.cfg.Fatalf("User service failed to listen: %v", err)
+	}
+
+	server := grpc.NewServer()
+	userpb.RegisterUserServiceServer(server, s)
+	reflection.Register(server)
+
+	go func() {
+		s.cfg.Infof("[User Service] Starting on %s", s.cfg.UserServicePort)
+		if err := server.Serve(lis); err != nil {
+			s.cfg.Fatalf("User service error: %v", err)
+		}
+	}()
+
+	return server
 }
 
 // GetUser retrieves a user by ID
